@@ -1,4 +1,4 @@
-# Seattle Hotel Map
+# ViataHotelProject
 
 A modern web application for discovering and exploring hotels in Seattle using React, TypeScript, Tailwind CSS, and Mapbox GL JS.
 

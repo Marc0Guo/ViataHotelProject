@@ -7,8 +7,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Seattle Hotel Map</h1>
-              <p className="text-gray-600">Discover the best hotels in Seattle</p>
+              <h1 className="text-2xl font-bold text-gray-900">Viata Hotel Project</h1>
             </div>
             <div className="text-sm text-gray-500">
               {new Date().toLocaleDateString()}

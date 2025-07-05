@@ -3,13 +3,13 @@ import mapboxgl from 'mapbox-gl';
 import Supercluster from 'supercluster';
 import { hotels } from '../data/hotels';
 import type { Hotel } from '../types/hotel';
-import MarkerPopup from './MarkerPopup';
+
 import 'mapbox-gl/dist/mapbox-gl.css';
 import HotelPin from './HotelPin';
 import React from "react";
 import ReactDOM from 'react-dom';
 
-// Set your Mapbox access token
+// Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
 interface MapProps {
@@ -20,7 +20,7 @@ export const Map: React.FC<MapProps> = ({ className = '' }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
-  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -83,60 +83,7 @@ export const Map: React.FC<MapProps> = ({ className = '' }) => {
         clusterRadius: 40
       });
 
-      // Add cluster layer
-      map.current.addLayer({
-        id: 'clusters',
-        type: 'circle',
-        source: 'hotels',
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': [
-            'step',
-            ['get', 'point_count'],
-            '#51bbd6',
-            100,
-            '#f1f075',
-            750,
-            '#f28cb1'
-          ],
-          'circle-radius': [
-            'step',
-            ['get', 'point_count'],
-            20,
-            100,
-            30,
-            750,
-            40
-          ]
-        }
-      });
 
-      // Add cluster count layer
-      map.current.addLayer({
-        id: 'cluster-count',
-        type: 'symbol',
-        source: 'hotels',
-        filter: ['has', 'point_count'],
-        layout: {
-          'text-field': '{point_count_abbreviated}',
-          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-          'text-size': 12
-        }
-      });
-
-      // Add unclustered point layer
-      map.current.addLayer({
-        id: 'unclustered-point',
-        type: 'circle',
-        source: 'hotels',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-color': '#11b4da',
-          'circle-radius': 8,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#fff'
-        }
-      });
 
       // Update source data
       const source = map.current.getSource('hotels') as mapboxgl.GeoJSONSource;
@@ -162,83 +109,66 @@ export const Map: React.FC<MapProps> = ({ className = '' }) => {
           .setLngLat([hotel.longitude, hotel.latitude])
           .addTo(map.current!);
 
+        // Add zoom level compensation to keep pin size fixed
+        const updateMarkerSize = () => {
+          if (map.current) {
+            const zoom = map.current.getZoom();
+            // Use a more gradual scaling factor
+            let scale = 1 / Math.pow(1.5, zoom - 16);
+
+            // Set minimum and maximum scale to prevent pins from becoming too small or too large
+            const minScale = 0.6;
+            const maxScale = 0.8;
+            scale = Math.max(scale, minScale);
+            scale = Math.min(scale, maxScale);
+
+            // Apply scale to the inner content
+            const innerContent = el.querySelector('div');
+            if (innerContent) {
+              innerContent.style.transform = `scale(${scale})`;
+              innerContent.style.transformOrigin = 'center center';
+            }
+          }
+        };
+
+        // Update size on zoom
+        map.current.on('zoom', updateMarkerSize);
+
+        // Initial size update
+        updateMarkerSize();
+
         el.addEventListener('click', () => {
-          setSelectedHotel(hotel);
+          // Remove existing popup if any
+          if (popup.current) {
+            popup.current.remove();
+          }
+
+          // Create new popup above the pin
+          popup.current = new mapboxgl.Popup({
+            closeButton: true,
+            closeOnClick: false,
+            offset: 25, // Offset to position above the pin
+            className: 'hotel-popup'
+          })
+            .setLngLat([hotel.longitude, hotel.latitude])
+            .setHTML(`
+              <div class="bg-white rounded-lg shadow-lg p-4 max-w-sm">
+                <h3 class="text-lg font-bold text-gray-900 mb-2">${hotel.name}</h3>
+                <div class="flex items-center space-x-2 mb-2">
+                  <span class="text-yellow-500 text-sm">${'★'.repeat(hotel.star_rating)}${'☆'.repeat(5 - hotel.star_rating)}</span>
+                  <span class="text-gray-600 text-sm">·</span>
+                  <span class="text-gray-600 text-sm">${hotel.review_count.toLocaleString()} reviews</span>
+                </div>
+                <p class="text-lg font-bold text-green-600 mb-3">$${typeof hotel.price_per_night === 'string' ? hotel.price_per_night : hotel.price_per_night.toLocaleString()}</p>
+                <img src="${hotel.image_url}" alt="${hotel.name}" class="w-full h-32 object-cover rounded-md">
+              </div>
+            `)
+            .addTo(map.current!);
         });
       });
     });
 
-    // Handle cluster clicks
-    map.current.on('click', 'clusters', (e) => {
-      if (!map.current) return;
 
-      const features = map.current.queryRenderedFeatures(e.point, {
-        layers: ['clusters']
-      });
-      const clusterId = features[0].properties?.cluster_id;
-      const source = map.current.getSource('hotels') as mapboxgl.GeoJSONSource;
-
-      source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-
-        map.current?.easeTo({
-          center: (features[0].geometry as any).coordinates,
-          zoom: zoom
-        });
-      });
-    });
-
-    // Handle individual hotel clicks
-    map.current.on('click', 'unclustered-point', (e) => {
-      if (!map.current || !e.features?.[0]) return;
-
-      const coordinates = (e.features[0].geometry as any).coordinates.slice();
-      const hotelData = e.features[0].properties;
-
-      // Find the hotel object
-      const hotel = hotels.find(h => h.hotel_id === hotelData.hotel_id);
-      if (!hotel) return;
-
-      setSelectedHotel(hotel);
-
-      // Create popup
-      if (popup.current) {
-        popup.current.remove();
-      }
-
-      popup.current = new mapboxgl.Popup()
-        .setLngLat(coordinates)
-        .setHTML('<div id="hotel-popup"></div>')
-        .addTo(map.current);
-
-      // Render popup content
-      const popupElement = document.getElementById('hotel-popup');
-      if (popupElement) {
-        // We'll render the popup content using React in the next step
-        popupElement.innerHTML = `
-          <div class="bg-white rounded-lg shadow-lg p-4 max-w-sm">
-            <h3 class="text-lg font-semibold text-gray-900">${hotel.name}</h3>
-            <p class="text-gray-600 text-sm">${hotel.address}</p>
-            <p class="text-lg font-bold text-green-600 mt-2">$${typeof hotel.price_per_night === 'string' ? hotel.price_per_night : hotel.price_per_night.toLocaleString()}</p>
-          </div>
-        `;
-      }
-    });
-
-    // Change cursor on hover
-    map.current.on('mouseenter', 'clusters', () => {
-      if (map.current) map.current.getCanvas().style.cursor = 'pointer';
-    });
-    map.current.on('mouseleave', 'clusters', () => {
-      if (map.current) map.current.getCanvas().style.cursor = '';
-    });
-
-    map.current.on('mouseenter', 'unclustered-point', () => {
-      if (map.current) map.current.getCanvas().style.cursor = 'pointer';
-    });
-    map.current.on('mouseleave', 'unclustered-point', () => {
-      if (map.current) map.current.getCanvas().style.cursor = '';
-    });
 
     return () => {
       if (map.current) {
@@ -251,11 +181,6 @@ export const Map: React.FC<MapProps> = ({ className = '' }) => {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-      {selectedHotel && (
-        <div className="absolute top-4 right-4 z-10">
-          <MarkerPopup hotel={selectedHotel} />
-        </div>
-      )}
     </div>
   );
 };
