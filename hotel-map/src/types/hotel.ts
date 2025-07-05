@@ -14,4 +14,3 @@ export interface Hotel {
   amenities: string[];
 }
 
-export default Hotel;

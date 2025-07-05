@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
-import Supercluster from 'supercluster';
 import { hotels } from '../data/hotels';
-import type { Hotel } from '../types/hotel';
 
+import { useClusteredHotels } from '../hooks/useClusteredHotels';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import HotelPin from './HotelPin';
+import ClusterMarker from './ClusterMarker';
 import React from "react";
-import ReactDOM from 'react-dom';
+
 
 // Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
@@ -16,88 +16,81 @@ interface MapProps {
   className?: string;
 }
 
-export const Map: React.FC<MapProps> = ({ className = '' }) => {
+export const Map: React.FC<MapProps> = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
 
+  const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
+  const [zoom, setZoom] = useState(12);
 
-  useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+  // Use the clustered hotels hook
+  const { clusters, cluster } = useClusteredHotels({ hotels, bounds, zoom });
 
-    // Initialize map
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-122.335167, 47.608013], // Seattle center
-      zoom: 12
-    });
+  // Determine if we should show clusters based on zoom level
+  const shouldShowClusters = zoom < 18; // 在缩放级别小于18时显示聚类
 
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl());
+  // Clear all markers
+  const clearMarkers = useCallback(() => {
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current = [];
+  }, []);
 
-    // Create supercluster instance
-    const cluster = new Supercluster({
-      radius: 40,
-      maxZoom: 16
-    });
+  // Render clusters and individual hotels
+  const renderClusters = useCallback(() => {
+    if (!map.current) return;
 
-    // Convert hotels to GeoJSON points
-    const points: GeoJSON.Feature<GeoJSON.Point>[] = hotels.map(hotel => ({
-      type: 'Feature',
-      properties: {
-        hotel_id: hotel.hotel_id,
-        name: hotel.name,
-        address: hotel.address,
-        star_rating: hotel.star_rating,
-        price_per_night: hotel.price_per_night,
-        rating: hotel.rating,
-        review_count: hotel.review_count,
-        image_url: hotel.image_url,
-        room_type: hotel.room_type,
-        amenities: hotel.amenities,
-        cluster: false
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [hotel.longitude, hotel.latitude]
-      }
-    }));
+    clearMarkers();
 
-    // Load points into cluster
-    cluster.load(points);
+    console.log('Rendering clusters:', clusters.length, 'clusters');
 
-    // Add source and layers
-    map.current.on('load', () => {
-      if (!map.current) return;
+    clusters.forEach((clusterPoint: any) => {
+      const el = document.createElement('div');
+      el.style.cursor = 'pointer';
 
-      // Add cluster source
-      map.current.addSource('hotels', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: []
-        },
-        cluster: true,
-        clusterMaxZoom: 16,
-        clusterRadius: 40
-      });
+      if (clusterPoint.properties.cluster) {
+        // Render cluster marker
+        const pointCount = clusterPoint.properties.point_count;
+        const pointCountAbbreviated = clusterPoint.properties.point_count_abbreviated;
 
+        import('react-dom/client').then(ReactDOM => {
+          const root = ReactDOM.createRoot(el);
+          root.render(
+            <ClusterMarker
+              pointCount={pointCount}
+              pointCountAbbreviated={pointCountAbbreviated}
+            />
+          );
+        });
 
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat(clusterPoint.geometry.coordinates)
+          .addTo(map.current!);
 
-      // Update source data
-      const source = map.current.getSource('hotels') as mapboxgl.GeoJSONSource;
-      source.setData({
-        type: 'FeatureCollection',
-        features: points
-      });
+        markersRef.current.push(marker);
 
-      // After map is loaded, for each hotel:
-      hotels.forEach(hotel => {
-        const el = document.createElement('div');
-        el.style.cursor = 'pointer';
+        // Handle cluster click
+        el.addEventListener('click', () => {
+          if (!map.current) return;
 
-        // Dynamically import ReactDOM to render the HotelPin
+          const expansionZoom = Math.min(
+            cluster.getClusterExpansionZoom(clusterPoint.properties.cluster_id),
+            20
+          );
+
+          map.current.easeTo({
+            center: clusterPoint.geometry.coordinates,
+            zoom: expansionZoom,
+            duration: 500
+          });
+        });
+
+      } else {
+        // Render individual hotel pin
+        const hotel = hotels.find(h => h.hotel_id.toString() === clusterPoint.properties.hotel_id);
+        if (!hotel) return;
+
         import('react-dom/client').then(ReactDOM => {
           const root = ReactDOM.createRoot(el);
           root.render(
@@ -109,45 +102,20 @@ export const Map: React.FC<MapProps> = ({ className = '' }) => {
           .setLngLat([hotel.longitude, hotel.latitude])
           .addTo(map.current!);
 
-        // Add zoom level compensation to keep pin size fixed
-        const updateMarkerSize = () => {
-          if (map.current) {
-            const zoom = map.current.getZoom();
-            // Use a more gradual scaling factor
-            let scale = 1 / Math.pow(1.5, zoom - 16);
+        markersRef.current.push(marker);
 
-            // Set minimum and maximum scale to prevent pins from becoming too small or too large
-            const minScale = 0.6;
-            const maxScale = 0.8;
-            scale = Math.max(scale, minScale);
-            scale = Math.min(scale, maxScale);
+        // Pin size is now fixed and won't change with zoom
 
-            // Apply scale to the inner content
-            const innerContent = el.querySelector('div');
-            if (innerContent) {
-              innerContent.style.transform = `scale(${scale})`;
-              innerContent.style.transformOrigin = 'center center';
-            }
-          }
-        };
-
-        // Update size on zoom
-        map.current.on('zoom', updateMarkerSize);
-
-        // Initial size update
-        updateMarkerSize();
-
+        // Handle hotel click
         el.addEventListener('click', () => {
-          // Remove existing popup if any
           if (popup.current) {
             popup.current.remove();
           }
 
-          // Create new popup above the pin
           popup.current = new mapboxgl.Popup({
             closeButton: true,
             closeOnClick: false,
-            offset: 25, // Offset to position above the pin
+            offset: 25,
             className: 'hotel-popup'
           })
             .setLngLat([hotel.longitude, hotel.latitude])
@@ -165,10 +133,43 @@ export const Map: React.FC<MapProps> = ({ className = '' }) => {
             `)
             .addTo(map.current!);
         });
-      });
+      }
+    });
+  }, [clusters, cluster, hotels, clearMarkers]);
+
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    // Initialize map
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-122.335167, 47.608013], // Seattle center
+      zoom: 12
     });
 
+    // Add navigation controls
+    map.current.addControl(new mapboxgl.NavigationControl());
 
+            // Handle map events
+    const handleMapMove = () => {
+      if (!map.current) return;
+
+      const mapBounds = map.current.getBounds();
+      if (mapBounds) {
+        setBounds([
+          mapBounds.getWest(),
+          mapBounds.getSouth(),
+          mapBounds.getEast(),
+          mapBounds.getNorth()
+        ]);
+      }
+      setZoom(map.current.getZoom());
+    };
+
+    map.current.on('load', handleMapMove);
+    map.current.on('moveend', handleMapMove);
+    map.current.on('zoomend', handleMapMove);
 
     return () => {
       if (map.current) {
@@ -177,6 +178,11 @@ export const Map: React.FC<MapProps> = ({ className = '' }) => {
       }
     };
   }, []);
+
+  // Render clusters when they change
+  useEffect(() => {
+    renderClusters();
+  }, [renderClusters]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>

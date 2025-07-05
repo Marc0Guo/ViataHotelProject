@@ -12,8 +12,8 @@ const HotelPin: React.FC<HotelPinProps> = ({ imageUrl, name }) => (
       src={imageUrl}
       alt={name}
       style={{
-        width: 78,
-        height: 78,
+        width: 48,
+        height: 48,
         borderRadius: '50%',
         border: '2px solid white',
         objectFit: 'cover',
@@ -25,14 +25,14 @@ const HotelPin: React.FC<HotelPinProps> = ({ imageUrl, name }) => (
       style={{
         background: '#3B5BDB',
         color: 'white',
-        borderRadius: 24,
-        padding: '6px 20px',
-        marginLeft: 10,
+        borderRadius: 20,
+        padding: '4px 16px',
+        marginLeft: 8,
         fontWeight: 600,
-        fontSize: 16,
+        fontSize: 14,
         display: 'flex',
         alignItems: 'center',
-        maxWidth: 180,
+        maxWidth: 140,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
