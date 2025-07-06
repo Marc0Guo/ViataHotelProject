@@ -28,8 +28,6 @@ export const Map: React.FC<MapProps> = () => {
   // Use the clustered hotels hook
   const { clusters, cluster } = useClusteredHotels({ hotels, bounds, zoom });
 
-  // Determine if we should show clusters based on zoom level
-  const shouldShowClusters = zoom < 18; // 在缩放级别小于18时显示聚类
 
   // Clear all markers
   const clearMarkers = useCallback(() => {

@@ -35,8 +35,8 @@ interface UseClusteredHotelsProps {
 export const useClusteredHotels = ({ hotels, bounds, zoom }: UseClusteredHotelsProps) => {
   const cluster = useMemo(() => {
     const supercluster = new Supercluster({
-      radius: 40, // 减少聚类半径，让酒店更容易分离
-      maxZoom: 17, // 增加最大聚类缩放级别
+      radius: 50, // Slightly larger radius for better clustering
+      maxZoom: 18, // Higher max zoom to allow clustering at higher levels
       minPoints: 2
     });
 
@@ -65,24 +65,17 @@ export const useClusteredHotels = ({ hotels, bounds, zoom }: UseClusteredHotelsP
     return supercluster;
   }, [hotels]);
 
-    const clusters = useMemo(() => {
+  const clusters = useMemo(() => {
     if (!bounds) return [];
 
-            // 在高缩放级别时强制显示所有单独的点，不使用聚类
-    const maxClusterZoom = 17; // 增加最大聚类缩放级别
-    const forceIndividualZoom = 18; // 强制显示单独点的缩放级别
+    // Improved zoom level logic
+    const maxClusterZoom = 18;
     const effectiveZoom = Math.min(Math.floor(zoom), maxClusterZoom);
 
-    let result;
-    if (effectiveZoom >= forceIndividualZoom) {
-      // 在缩放级别18及以上时，使用非常高的缩放级别来强制显示所有单独的点
-      result = cluster.getClusters(bounds, 20); // 使用非常高的缩放级别
-      console.log('Forcing individual points at zoom:', effectiveZoom, 'items:', result.length);
-    } else {
-      // 在低缩放级别时使用聚类
-      result = cluster.getClusters(bounds, effectiveZoom);
-      console.log('Using clusters at zoom:', effectiveZoom, 'items:', result.length);
-    }
+    // Get clusters for the current zoom level
+    const result = cluster.getClusters(bounds, effectiveZoom);
+
+    console.log(`Zoom: ${zoom}, Effective zoom: ${effectiveZoom}, Clusters: ${result.length}`);
 
     return result;
   }, [cluster, bounds, zoom]);
