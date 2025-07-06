@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { hotels } from '../data/hotels';
-
 import { useClusteredHotels } from '../hooks/useClusteredHotels';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import HotelPin from './HotelPin';
 import ClusterMarker from './ClusterMarker';
 import React from "react";
-
 
 // Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
@@ -28,7 +26,6 @@ export const Map: React.FC<MapProps> = () => {
   // Use the clustered hotels hook
   const { clusters, cluster } = useClusteredHotels({ hotels, bounds, zoom });
 
-
   // Clear all markers
   const clearMarkers = useCallback(() => {
     markersRef.current.forEach(marker => marker.remove());
@@ -40,8 +37,6 @@ export const Map: React.FC<MapProps> = () => {
     if (!map.current) return;
 
     clearMarkers();
-
-    console.log('Rendering clusters:', clusters.length, 'clusters');
 
     clusters.forEach((clusterPoint: any) => {
       const el = document.createElement('div');
@@ -149,7 +144,7 @@ export const Map: React.FC<MapProps> = () => {
     // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl());
 
-            // Handle map events
+    // Handle map events
     const handleMapMove = () => {
       if (!map.current) return;
 

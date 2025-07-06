@@ -35,8 +35,8 @@ interface UseClusteredHotelsProps {
 export const useClusteredHotels = ({ hotels, bounds, zoom }: UseClusteredHotelsProps) => {
   const cluster = useMemo(() => {
     const supercluster = new Supercluster({
-      radius: 50, // Slightly larger radius for better clustering
-      maxZoom: 18, // Higher max zoom to allow clustering at higher levels
+      radius: 50,
+      maxZoom: 18,
       minPoints: 2
     });
 
@@ -68,16 +68,10 @@ export const useClusteredHotels = ({ hotels, bounds, zoom }: UseClusteredHotelsP
   const clusters = useMemo(() => {
     if (!bounds) return [];
 
-    // Improved zoom level logic
     const maxClusterZoom = 18;
     const effectiveZoom = Math.min(Math.floor(zoom), maxClusterZoom);
 
-    // Get clusters for the current zoom level
-    const result = cluster.getClusters(bounds, effectiveZoom);
-
-    console.log(`Zoom: ${zoom}, Effective zoom: ${effectiveZoom}, Clusters: ${result.length}`);
-
-    return result;
+    return cluster.getClusters(bounds, effectiveZoom);
   }, [cluster, bounds, zoom]);
 
   return {

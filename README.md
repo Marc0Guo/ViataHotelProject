@@ -9,7 +9,6 @@ A modern web application for discovering and exploring hotels in Seattle using R
 - 📍 Detailed hotel information popups
 - ⭐ Star ratings and reviews
 - 💰 Price information
-- 🏊 Amenities display
 - 📱 Responsive design
 
 ## Tech Stack
@@ -21,26 +20,30 @@ A modern web application for discovering and exploring hotels in Seattle using R
 - **Build Tool**: Vite
 - **Data**: Seattle hotel data (13 hotels)
 
-## Project Structure
+## Project Architecture
 
 ```
 src/
 ├── components/
-│   ├── Map.tsx             # Main map logic, rendering, and clustering
-│   └── MarkerPopup.tsx     # Stateless JSX template for marker popup
+│ ├── Map.tsx # Main map component with clustering and rendering logic
+│ ├── HotelPin.tsx # Individual hotel marker component
+│ ├── ClusterMarker.tsx # Clustered markers component
+│ └── MarkerPopup.tsx # Hotel information popup template
+├── hooks/
+│ └── useClusteredHotels.ts # Custom hook for hotel clustering logic
 ├── data/
-│   └── hotels.ts           # Array of hotel objects, source of truth
+│ └── hotels.ts # Hotel data source and exports
 ├── types/
-│   └── hotel.ts            # Hotel TypeScript interface
-├── App.tsx                 # Layout, renders <Map />
-└── index.tsx               # ReactDOM render
+│ └── hotel.ts # TypeScript interfaces and type definitions
+├── App.tsx # Main application component and layout
+└── index.tsx # Application entry point and ReactDOM render
 ```
 
 ## Setup Instructions
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone <https://github.com/Marc0Guo/ViataHotelProject.git>
    cd hotel-map
    ```
 
@@ -68,7 +71,7 @@ src/
 
 5. **Open your browser**
 
-   Navigate to `http://localhost:5173` to view the application.
+   Use the link to view the application.
 
 ## Usage
 
@@ -77,16 +80,6 @@ src/
 - **Hotel Details**: Click on individual hotel markers to see detailed information
 - **Navigation**: Use the navigation controls in the top-right corner
 
-## Hotel Data
-
-The application uses real Seattle hotel data including:
-- Hotel names and addresses
-- Coordinates (latitude/longitude)
-- Star ratings and user ratings
-- Price per night
-- Amenities
-- Room types
-- Review counts
 
 ## Building for Production
 
@@ -96,19 +89,7 @@ npm run build
 
 The built files will be in the `dist/` directory.
 
-## Development
-
-- **TypeScript**: Full type safety with custom interfaces
-- **ESLint**: Code linting and formatting
-- **Hot Reload**: Automatic browser refresh on file changes
-- **Tailwind CSS**: Utility-first CSS framework
-
 ## Customization
-
-### Styling
-- Modify `tailwind.config.js` for custom design tokens
-- Update `src/index.css` for global styles
-- Customize components in `src/components/`
 
 ### Map Configuration
 - Change map style in `src/components/Map.tsx`
@@ -119,6 +100,3 @@ The built files will be in the `dist/` directory.
 - Update hotel data in `src/data/hotels.ts`
 - Modify the Hotel interface in `src/types/hotel.ts`
 
-## License
-
-This project is open source and available under the MIT License.
