@@ -25,18 +25,19 @@ A modern web application for discovering and exploring hotels in Seattle using R
 ```
 src/
 ├── components/
-│ ├── Map.tsx # Main map component with clustering and rendering logic
-│ ├── HotelPin.tsx # Individual hotel marker component
-│ ├── ClusterMarker.tsx # Clustered markers component
-│ └── MarkerPopup.tsx # Hotel information popup template
+│ ├── Map.tsx                 # Main map component with clustering and rendering logic
+│ ├── HotelPin.tsx            # Individual hotel marker component
+│ ├── ClusterMarker.tsx       # Clustered markers component
+│ └── MarkerPopup.tsx         # Hotel information popup template
 ├── hooks/
-│ └── useClusteredHotels.ts # Custom hook for hotel clustering logic
+│ └── useClusteredHotels.ts   # Custom hook for hotel clustering logic
 ├── data/
-│ └── hotels.ts # Hotel data source and exports
+│ └── hotels.ts               # Hotel data source and exports
+│ └── YOUR_OWN_DATA.json      # Put your own data here
 ├── types/
-│ └── hotel.ts # TypeScript interfaces and type definitions
-├── App.tsx # Main application component and layout
-└── index.tsx # Application entry point and ReactDOM render
+│ └── hotel.ts                # TypeScript interfaces and type definitions
+├── App.tsx                   # Main application component and layout
+└── index.tsx                 # Application entry point and ReactDOM render
 ```
 
 ## Setup Instructions
